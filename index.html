@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL跳板机</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/v4-shims.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        danger: '#EF4444',
+                        warning: '#F59E0B',
+                        info: '#06B6D4'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .gradient-bg {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            }
+            .glass-effect {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg font-inter">
+    <!-- 重定向状态页面 (默认隐藏) -->
+    <div id="redirect-status" class="min-h-screen flex items-center justify-center p-4 hidden">
+        <div class="glass-effect rounded-2xl p-8 max-w-2xl w-full">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-full mb-4">
+                    <i class="fa fa-link text-2xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">URL重定向工具</h1>
+                <p class="text-white/80">正在处理重定向请求</p>
+            </div>
+
+            <div id="status-container" class="bg-white/10 rounded-xl p-6 mb-6">
+                <div id="status-loading" class="hidden">
+                    <div class="flex items-center justify-center">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white mr-3"></div>
+                        <span class="text-white">正在解析URL参数...</span>
+                    </div>
+                </div>
+                
+                <div id="status-error" class="hidden">
+                    <div class="flex items-center text-danger">
+                        <i class="fa fa-exclamation-circle mr-2"></i>
+                        <span id="error-message" class="text-white"></span>
+                    </div>
+                </div>
+                
+                <div id="status-success" class="hidden">
+                    <div class="flex items-center text-secondary">
+                        <i class="fa fa-check-circle mr-2"></i>
+                        <span class="text-white">正在重定向到目标URL...</span>
+                    </div>
+                    <div class="mt-4 text-white/80 text-sm">
+                        <div class="flex items-center">
+                            <span class="w-24">目标URL:</span>
+                            <span id="target-url" class="truncate"></span>
+                        </div>
+                        <div class="flex items-center mt-2">
+                            <span class="w-24">倒计时:</span>
+                            <span id="countdown" class="text-primary font-semibold">3</span>
+                            <span class="ml-2">秒后自动跳转</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button id="manual-redirect" class="hidden bg-primary hover:bg-primary/80 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50">
+                    <i class="fa fa-external-link mr-2"></i>
+                    立即跳转
+                </button>
+                <button id="go-back" class="hidden bg-gray-600 hover:bg-gray-500 text-white px-6 py-3 rounded-lg transition-all duration-300">
+                    <i class="fa fa-arrow-left mr-2"></i>
+                    返回首页
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 工具页面 (默认显示) -->
+    <div id="tool-page" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass-effect rounded-2xl p-8 max-w-2xl w-full">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/20 rounded-full mb-4">
+                    <i class="fa fa-link text-2xl text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white mb-2">URL重定向工具</h1>
+                <p class="text-white/80">创建安全的重定向链接</p>
+            </div>
+
+            <div class="bg-white/10 rounded-xl p-6 mb-6">
+                <h2 class="text-xl font-semibold text-white mb-4">
+                    <i class="fa fa-paper-plane text-primary mr-2"></i>
+                    创建重定向链接
+                </h2>
+                
+                <form id="redirect-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">目标URL</label>
+                        <input type="url" id="target-url-input" 
+                               class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-primary focus:border-transparent"
+                               placeholder="https://www.example.com" required>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">重定向URL</label>
+                        <div class="relative">
+                            <input type="text" id="generated-url" 
+                                   class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white bg-gray-700/50"
+                                   readonly>
+                            <button type="button" id="copy-button" 
+                                    class="absolute right-2 top-2 bg-primary text-white px-3 py-1 rounded text-sm hover:bg-primary/90 transition-colors duration-300">
+                                <i class="fa fa-copy mr-1"></i>复制
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="w-full bg-primary hover:bg-primary/80 text-white py-3 rounded-lg transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary/50">
+                        <i class="fa fa-link mr-2"></i>
+                        生成重定向链接
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-blue-50/20 border-l-4 border-primary p-4 rounded text-white/80">
+                <h3 class="font-semibold text-white mb-2">
+                    <i class="fa fa-info-circle text-primary mr-2"></i>
+                    使用说明
+                </h3>
+                <ul class="space-y-1 text-sm">
+                    <li>• 输入要重定向的目标URL</li>
+                    <li>• 点击"生成重定向链接"按钮</li>
+                    <li>• 复制生成的链接并分享</li>
+                    <li>• 访问链接将自动重定向到目标URL</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置参数
+        const config = {
+            redirectTimeout: 3000, // 重定向延迟时间（毫秒）
+            whitelistDomains: [
+                'github.com',
+                'web3.okx.com',
+                'www.binance.com',
+                'www.gate.com',
+            ],
+            allowedProtocols: ['http:', 'https:']
+        };
+
+        // DOM元素
+        const redirectStatus = document.getElementById('redirect-status');
+        const toolPage = document.getElementById('tool-page');
+
+        // URL验证函数
+        function isValidUrl(urlString) {
+            try {
+                const url = new URL(urlString);
+                return config.allowedProtocols.includes(url.protocol);
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // 检查域名是否在白名单中
+        function isDomainAllowed(urlString) {
+            try {
+                const url = new URL(urlString);
+                const domain = url.hostname;
+                
+                // 检查是否包含白名单中的域名
+                return config.whitelistDomains.some(allowedDomain => {
+                    // 处理通配符（如*.example.com）
+                    if (allowedDomain.startsWith('*.')) {
+                        const baseDomain = allowedDomain.substring(2);
+                        return domain.endsWith(baseDomain) || domain === baseDomain;
+                    }
+                    return domain === allowedDomain;
+                });
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // 显示加载状态
+        function showLoading() {
+            document.getElementById('status-loading').classList.remove('hidden');
+            document.getElementById('status-error').classList.add('hidden');
+            document.getElementById('status-success').classList.add('hidden');
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            document.getElementById('status-loading').classList.add('hidden');
+            document.getElementById('status-error').classList.remove('hidden');
+            document.getElementById('status-success').classList.add('hidden');
+            document.getElementById('error-message').textContent = message;
+            document.getElementById('go-back').classList.remove('hidden');
+        }
+
+        // 显示成功信息
+        function showSuccess(targetUrl) {
+            document.getElementById('status-loading').classList.add('hidden');
+            document.getElementById('status-error').classList.add('hidden');
+            document.getElementById('status-success').classList.remove('hidden');
+            document.getElementById('target-url').textContent = targetUrl;
+            document.getElementById('manual-redirect').classList.remove('hidden');
+            
+            // 倒计时
+            let countdown = 3;
+            const countdownElement = document.getElementById('countdown');
+            
+            const countdownInterval = setInterval(() => {
+                countdown--;
+                countdownElement.textContent = countdown;
+                
+                if (countdown <= 0) {
+                    clearInterval(countdownInterval);
+                    redirectTo(targetUrl);
+                }
+            }, 1000);
+        }
+
+        // 执行重定向
+        function redirectTo(url) {
+            try {
+                window.location.href = url;
+            } catch (e) {
+                showError('重定向失败，请手动点击跳转按钮');
+            }
+        }
+
+        // 处理重定向逻辑
+        function handleRedirect() {
+            // 解析URL参数
+            const urlParams = new URLSearchParams(window.location.search);
+            const jumpUrl = urlParams.get('jump');
+            
+            if (jumpUrl) {
+                // 显示重定向状态页面
+                redirectStatus.classList.remove('hidden');
+                toolPage.classList.add('hidden');
+                
+                showLoading();
+                
+                // 验证URL格式
+                if (!isValidUrl(jumpUrl)) {
+                    showError('无效的URL格式，请检查目标地址');
+                    return;
+                }
+
+                // 检查域名白名单
+                if (!isDomainAllowed(jumpUrl)) {
+                    showError('目标域名不在允许列表中，禁止重定向');
+                    return;
+                }
+
+                // 显示成功信息并准备重定向
+                showSuccess(jumpUrl);
+
+                // 绑定手动跳转按钮
+                document.getElementById('manual-redirect').addEventListener('click', () => {
+                    redirectTo(jumpUrl);
+                });
+
+                // 绑定返回按钮
+                document.getElementById('go-back').addEventListener('click', () => {
+                    window.location.href = window.location.href.split('?')[0];
+                });
+            } else {
+                // 显示工具页面
+                redirectStatus.classList.add('hidden');
+                toolPage.classList.remove('hidden');
+                
+                // 初始化工具页面功能
+                initToolPage();
+            }
+        }
+
+        // 初始化工具页面
+        function initToolPage() {
+            // 表单提交处理
+            document.getElementById('redirect-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const targetUrl = document.getElementById('target-url-input').value.trim();
+                const currentUrl = window.location.href.split('?')[0];
+                
+                const redirectUrl = `${currentUrl}?jump=${encodeURIComponent(targetUrl)}`;
+                document.getElementById('generated-url').value = redirectUrl;
+            });
+
+            // 复制按钮功能
+            document.getElementById('copy-button').addEventListener('click', function() {
+                const generatedUrl = document.getElementById('generated-url');
+                generatedUrl.select();
+                document.execCommand('copy');
+                
+                // 显示复制成功提示
+                const originalText = this.innerHTML;
+                this.innerHTML = '<i class="fa fa-check mr-1"></i>已复制';
+                this.classList.add('bg-secondary');
+                this.classList.remove('bg-primary');
+                
+                setTimeout(() => {
+                    this.innerHTML = originalText;
+                    this.classList.remove('bg-secondary');
+                    this.classList.add('bg-primary');
+                }, 2000);
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', handleRedirect);
+    </script>
+</body>
+</html>
