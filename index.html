@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/v4-shims.min.css">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' fill='%233B82F6'/%3E%3Cpath d='M200 80H128V80a48 48 0 0 0-48 48v48a48 48 0 0 0 48 48h72a16 16 0 0 0 16-16V96a16 16 0 0 0-16-16z' fill='white' opacity='0.9'/%3E%3Cpath d='M88 96a40 40 0 0 0-40 40v32a8 8 0 0 0 16 0v-32a24 24 0 0 1 24-24h72V96H88z' fill='white'/%3E%3C/svg%3E">
     
     <script>
         tailwind.config = {
@@ -227,16 +228,17 @@
         }
 
         // 显示成功信息
-        function showSuccess(targetUrl) {
+        function showSuccess(targetUrl, waitTime) {
             document.getElementById('status-loading').classList.add('hidden');
             document.getElementById('status-error').classList.add('hidden');
             document.getElementById('status-success').classList.remove('hidden');
             document.getElementById('target-url').textContent = targetUrl;
             document.getElementById('manual-redirect').classList.remove('hidden');
             
-            // 倒计时
-            let countdown = 3;
+            // 根据传入的等待时间计算倒计时秒数
+            let countdown = Math.ceil(waitTime / 1000);
             const countdownElement = document.getElementById('countdown');
+            countdownElement.textContent = countdown;
             
             const countdownInterval = setInterval(() => {
                 countdown--;
@@ -263,6 +265,17 @@
             // 解析URL参数
             const urlParams = new URLSearchParams(window.location.search);
             const jumpUrl = urlParams.get('jump');
+            const waitParam = urlParams.get('wait');
+            
+            // 获取等待时长，如果没有提供则使用默认配置
+            let waitTime = config.redirectTimeout;
+            if (waitParam) {
+                const parsedWait = parseInt(waitParam, 10);
+                // 验证wait参数是有效的正整数
+                if (!isNaN(parsedWait) && parsedWait > 0) {
+                    waitTime = parsedWait;
+                }
+            }
             
             if (jumpUrl) {
                 // 显示重定向状态页面
@@ -284,7 +297,7 @@
                 }
 
                 // 显示成功信息并准备重定向
-                showSuccess(jumpUrl);
+                showSuccess(jumpUrl, waitTime);
 
                 // 绑定手动跳转按钮
                 document.getElementById('manual-redirect').addEventListener('click', () => {
