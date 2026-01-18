@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/v4-shims.min.css">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' fill='%233B82F6'/%3E%3Cpath d='M224.38 40.13a8.47 8.47 0 0 0-9-1.07l-168 88a8 8 0 0 0 0 14.07l59 30.65l30.65 59a8 8 0 0 0 14.07 0l88-168a8.47 8.47 0 0 0-1.07-9.07z' fill='white'/%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Ccircle cx='128' cy='128' r='128' fill='white'/%3E%3Cpath d='M224.38 40.13a8.47 8.47 0 0 0-9-1.07l-168 88a8 8 0 0 0 0 14.07l59 30.65l30.65 59a8 8 0 0 0 14.07 0l88-168a8.47 8.47 0 0 0-1.07-9.07z' fill='%233B82F6'/%3E%3C/svg%3E">
     
     <script>
         tailwind.config = {
@@ -129,6 +129,14 @@
                     </div>
                     
                     <div>
+                        <label class="block text-sm font-medium text-white/80 mb-1">等待时长 (毫秒)</label>
+                        <input type="number" id="wait-time-input" 
+                               class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:ring-2 focus:ring-primary focus:border-transparent"
+                               placeholder="3000" value="3000" min="0" required>
+                        <p class="text-xs text-white/60 mt-1">设置自动跳转前的等待时长，单位毫秒</p>
+                    </div>
+                    
+                    <div>
                         <label class="block text-sm font-medium text-white/80 mb-1">重定向URL</label>
                         <div class="relative">
                             <input type="text" id="generated-url" 
@@ -156,9 +164,10 @@
                 </h3>
                 <ul class="space-y-1 text-sm">
                     <li>• 输入要重定向的目标URL</li>
+                    <li>• 设置自动跳转的等待时长（默认3000毫秒）</li>
                     <li>• 点击"生成重定向链接"按钮</li>
                     <li>• 复制生成的链接并分享</li>
-                    <li>• 访问链接将自动重定向到目标URL</li>
+                    <li>• 访问链接将按设定的时间自动重定向到目标URL</li>
                 </ul>
             </div>
         </div>
@@ -325,9 +334,10 @@
                 e.preventDefault();
                 
                 const targetUrl = document.getElementById('target-url-input').value.trim();
+                const waitTime = document.getElementById('wait-time-input').value.trim() || '3000';
                 const currentUrl = window.location.href.split('?')[0];
                 
-                const redirectUrl = `${currentUrl}?jump=${encodeURIComponent(targetUrl)}`;
+                const redirectUrl = `${currentUrl}?jump=${encodeURIComponent(targetUrl)}&wait=${encodeURIComponent(waitTime)}`;
                 document.getElementById('generated-url').value = redirectUrl;
             });
 
